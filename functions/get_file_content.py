@@ -1,5 +1,22 @@
 import os
 
+schema_get_file_content= {
+    "type": "function",
+    "function": {
+        "name": "get_file_content",
+        "description": "Reads file contents in a specified file path relative to the working directory, and returns upto 10000 chars from the file. ",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "file_path": {
+                    "type": "string",
+                    "description": "File path to read content from, relative to the working directory (default is the working directory itself)",
+                },
+            },
+        },
+    },
+}
+
 def get_file_content(working_directory: str, file_path: str) -> str:
     try:
         abs_work_dir = os.path.abspath(working_directory)

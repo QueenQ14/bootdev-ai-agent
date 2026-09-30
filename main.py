@@ -2,6 +2,9 @@ import os
 from dotenv import load_dotenv
 from openai import OpenAI
 import argparse
+from prompts import system_prompt
+from functions.call_function import available_functions
+import json
 
 #Loading env variables
 load_dotenv()
@@ -27,6 +30,7 @@ args = parser.parse_args()
 
 
 messages = [
+    {"role": "system", "content": system_prompt},
     {"role": "user", "content": args.user_prompt},
 ]
 
@@ -34,6 +38,8 @@ def generate_completion(client,messages):
     response = client.chat.completions.create(
         model=model,
         messages=messages,
+        temperature=0,
+        tools=available_functions,
     )
     return response
 
@@ -48,6 +54,10 @@ def main():
         print(f"Prompt tokens: {response.usage.prompt_tokens}")
         print(f"Response tokens: {response.usage.completion_tokens}")
     print(response.choices[0].message.content)
+
+    for tool_call in response.choices[0].message.tool_calls:
+        function_args = json.loads(tool_call.function.arguments or "{}")
+        print(f"Calling function: {tool_call.function.name}({function_args})")
 
 
 
