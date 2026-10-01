@@ -41,7 +41,6 @@ def generate_completion(client,messages):
     response = client.chat.completions.create(
         model=model,
         messages=messages,
-        temperature=0,
         tools=available_functions,
     )
     return response
