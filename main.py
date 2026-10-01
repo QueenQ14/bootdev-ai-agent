@@ -5,12 +5,15 @@ import argparse
 from prompts import system_prompt
 from functions.call_function import available_functions, call_function
 import json
+import sys
 
 #Loading env variables
 load_dotenv()
 api_key = os.environ.get("OPENROUTER_API_KEY", None)
 if api_key == None:
     raise RuntimeError("API Key not found in .env")
+
+MAX_RETRIES = 20
 
 #Model value to be passed to OpenRouter
 model = "openrouter/free"
@@ -46,22 +49,38 @@ def generate_completion(client,messages):
 
 def main():
     print("Hello from ai-agent!")
-    response = generate_completion(client,messages)
-    if response.usage == None:
-        raise RuntimeError("Failed API Request, please try again.")
-    if args.verbose:
-        print(f"User prompt: {args.user_prompt}")
-        print(f"Prompt tokens: {response.usage.prompt_tokens}")
-        print(f"Response tokens: {response.usage.completion_tokens}")
-    print(response.choices[0].message.content)
+    flag = False
+    for tries in range(MAX_RETRIES):
 
-    for tool_call in response.choices[0].message.tool_calls:
-        result_message = call_function(tool_call,args.verbose)
-        if not result_message['content']:
-            raise Exception("Tool return empty content")
-        
+        response = generate_completion(client,messages)
+        if response.usage == None:
+            raise RuntimeError("Failed API Request, please try again.")
         if args.verbose:
-            print(f"-> {result_message['content']}")
+            print(f"User prompt: {args.user_prompt}")
+            print(f"Prompt tokens: {response.usage.prompt_tokens}")
+            print(f"Response tokens: {response.usage.completion_tokens}")
+        
+        message = response.choices[0].message
+        messages.append(message)
+
+        if not message.tool_calls:
+            print(response.choices[0].message.content)
+            flag = True
+            break
+
+        for tool_call in message.tool_calls:
+            result_message = call_function(tool_call,args.verbose)
+            if not result_message['content']:
+                raise Exception("Tool return empty content")
+            
+            if args.verbose:
+                print(f"-> {result_message['content']}")
+            
+            messages.append(result_message)
+    
+    if not flag:
+        print("Max retries exceeded, Agent was unable to find an answer")
+        sys.exit(1)
 
 
 
